@@ -90,8 +90,6 @@ func mGraphGetCalendarView(client *mgraph.MGraph, repo *repository.Repository) h
 		serializer := msjson.NewJsonSerializationWriter()
 		events.Serialize(serializer)
 		eventsJson, _ := serializer.GetSerializedContent()
-
-		// Write JSON to the Chi response
 		w.Header().Set("Content-Type", "application/json")
 
 		// Iterating over events
@@ -121,7 +119,7 @@ func mGraphGetCalendarView(client *mgraph.MGraph, repo *repository.Repository) h
 						UpdatedTime:     *event.GetLastModifiedDateTime(),
 						Timezone:        *event.GetStart().GetTimeZone(),
 						PlatformUrl:     *event.GetWebLink(),
-						MeetingUrl:      *event.GetOnlineMeetingUrl(),
+						MeetingUrl:      *event.GetOnlineMeeting().GetJoinUrl(),
 						CreatedAt:       time.Now(),
 						UpdatedAt:       time.Now(),
 					}
