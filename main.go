@@ -13,7 +13,10 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	msjson "github.com/microsoft/kiota-serialization-json-go"
+	"github.com/scheduler-prototype/dto"
 	"github.com/scheduler-prototype/mgraph"
+	"github.com/scheduler-prototype/repository"
+	"github.com/scheduler-prototype/utility"
 )
 
 func main() {
@@ -45,18 +48,21 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// initialize reposotories
+	repo := repository.NewRepository(db)
+
 	// chi router
 	r := chi.NewRouter()
 
 	subRouter := chi.NewRouter()
-	subRouter.Get("/calendarview", mGraphGetCalendarView(client))
+	subRouter.Get("/calendarview", mGraphGetCalendarView(client, repo))
 
 	r.Mount("/mgraph", subRouter)
 
 	http.ListenAndServe(":8080", r)
 }
 
-func mGraphGetCalendarView(client *mgraph.MGraph) http.HandlerFunc {
+func mGraphGetCalendarView(client *mgraph.MGraph, repo *repository.Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// get the current time in the user's timezone
 		now := time.Now().UTC().Add(time.Duration(time.Hour * -8))
@@ -87,23 +93,52 @@ func mGraphGetCalendarView(client *mgraph.MGraph) http.HandlerFunc {
 
 		// Write JSON to the Chi response
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte("{"))
-		w.Write(eventsJson)
-		w.Write([]byte("}"))
 
-		// Itterating over events
+		// Iterating over events
 		for _, event := range events.GetValue() {
-			fmt.Println("Event found:")
-			fmt.Printf("Event: %s\n", *event.GetSubject())
-			fmt.Printf("Start: %s\n", *event.GetStart().GetDateTime())
-			fmt.Printf("End: %s\n", *event.GetEnd().GetDateTime())
-			fmt.Printf("Location: %s\n", *event.GetLocation().GetDisplayName())
-			fmt.Printf("Attendees: ")
-			attendees := event.GetAttendees()
-			for _, attendee := range attendees {
-				fmt.Printf("%s ", *attendee.GetEmailAddress().GetAddress())
+			log.Println("entered iteration")
+			iCalUid := *event.GetICalUId()
+
+			// Check if event already exists in DB
+			_, err := repo.GetEventByICalUid(iCalUid)
+			if err != nil {
+				if err == utility.ErrNotFound {
+					// Create DTO for insertion
+					eventDto := &dto.MGraphEventDto{
+						UserId:          "1",
+						ICalId:          *event.GetICalUId(),
+						EventId:         *event.GetId(),
+						Title:           *event.GetSubject(),
+						Description:     *event.GetBody().GetContent(),
+						LocationsCount:  len(event.GetLocations()),
+						StartTime:       *event.GetStart().GetDateTime(),
+						EndTime:         *event.GetEnd().GetDateTime(),
+						IsOnline:        *event.GetIsOnlineMeeting(),
+						IsAllDay:        *event.GetIsAllDay(),
+						IsCancelled:     *event.GetIsCancelled(),
+						OrganizerUserId: "1",
+						CreatedTime:     *event.GetCreatedDateTime(),
+						UpdatedTime:     *event.GetLastModifiedDateTime(),
+						Timezone:        *event.GetStart().GetTimeZone(),
+						PlatformUrl:     *event.GetWebLink(),
+						MeetingUrl:      *event.GetOnlineMeetingUrl(),
+						CreatedAt:       time.Now(),
+						UpdatedAt:       time.Now(),
+					}
+
+					err = repo.CreateEvent(eventDto)
+					if err != nil {
+						http.Error(w, err.Error(), http.StatusInternalServerError)
+						return
+					}
+				} else {
+					w.WriteHeader(http.StatusInternalServerError)
+					response := map[string]string{"error": err.Error()}
+					json.NewEncoder(w).Encode(response)
+					return
+				}
 			}
-			fmt.Printf("\n\n")
+			continue
 		}
 
 		// Print the time the request took
