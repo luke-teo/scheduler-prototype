@@ -48,7 +48,16 @@ func main() {
 	// chi router
 	r := chi.NewRouter()
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	subRouter := chi.NewRouter()
+	subRouter.Get("/calendarview", mGraphGetCalendarView(client))
+
+	r.Mount("/mgraph", subRouter)
+
+	http.ListenAndServe(":8080", r)
+}
+
+func mGraphGetCalendarView(client *mgraph.MGraph) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
 		// get the current time in the user's timezone
 		now := time.Now().UTC().Add(time.Duration(time.Hour * -8))
 
@@ -102,7 +111,5 @@ func main() {
 
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(eventsJson)
-	})
-
-	http.ListenAndServe(":8080", r)
+	}
 }
