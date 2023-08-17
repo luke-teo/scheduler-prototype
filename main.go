@@ -9,7 +9,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	azidentity "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/go-chi/chi"
 	"github.com/joho/godotenv"
@@ -29,7 +28,8 @@ func main() {
 
 	// db connection
 	dbConnStr := os.Getenv("DB_CONN_STR")
-	db, err := sql.Open("postgres", dbConnStr)
+	dbDriver := os.Getenv("DB_DRIVER")
+	db, err := sql.Open(dbDriver, dbConnStr)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -53,20 +53,9 @@ func main() {
 	// getting request adapter
 	client, _ := msgraphsdk.NewGraphServiceClientWithCredentials(cred, scopes)
 
-	token, err := cred.GetToken(context.Background(), policy.TokenRequestOptions{
-		Scopes: scopes,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(token.Token)
-
 	// chi router
-	r := chi.NewRouter()
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-
 		// get the current time in the user's timezone
 		now := time.Now().UTC().Add(time.Duration(time.Hour * -8))
 
@@ -131,8 +120,8 @@ func main() {
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", r))
-
 }
+
 func printOdataError(err error) {
 	switch err.(type) {
 	case *odataerrors.ODataError:

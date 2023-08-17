@@ -1,6 +1,26 @@
 version: "3.9"
 services:
-  pluto_db:
+  scheduler_server:
+    build:
+      dockerfile: ./dockerfile
+      context: .
+      args:
+        DATABASE_DRIVER: ${DB_DRIVER}
+        DATABASE_URL: ${DB_CONN_STR}
+      target: dev
+    env_file:
+      - ./.env
+    environment:
+      DATABASE_DRIVER: ${DB_DRIVER}
+      DATABASE_URL: ${DB_CONN_STR}
+    ports:
+      - 8080:8080
+    volumes:
+      - .:/opt/app/server
+      - ./.env:/opt/app/server/.env
+    depends_on:
+      - scheduler_db
+  scheduler_db:
     image: postgres:latest
     restart: always
     ports:

@@ -1,3 +1,37 @@
+DATABASE_URL ?= postgres://root:secret@localhost:5434/prototype?sslmode=disable
+
+HAS_DOCKER := $(shell command -v docker 2> /dev/null)
+ifndef HAS_DOCKER
+    $(error "Docker is not installed. Please install Docker.")
+endif
+
+# Target: check-docker
+# Description: Check if Docker is installed
+check-docker:
+ifndef HAS_DOCKER
+    $(error "Docker is not installed. Please install Docker.")
+endif
+
+# Target: docker-up
+# Description: Bring up Docker containers in detached mode
+docker-up: check-docker
+	docker compose up -d --remove-orphans
+
+# Target: docker-down
+# Description: Bring down Docker containers
+docker-down: check-docker
+	docker compose down
+
+# Target: docker-rebuild
+# Description: Rebuild and bring up Docker containers in detached mode
+docker-rebuild: check-docker
+	docker compose up -d --build
+
+# Target: docker-shell
+# Description: Open a shell inside the server container
+docker-shell: check-docker
+	docker compose exec server /bin/sh
+
 # Target: migrate-create
 # Description: Create a new migration using goose
 # Usage: make migrate-create name=<migration_name>
@@ -29,4 +63,4 @@ migrate-status:
 	goose -dir database/migrations postgres postgres://root:secret@localhost:5434/prototype?sslmode=disable status
 
 	
-.PHONY: migrate-create migrate-up migrate-down migrate-redo migrate-status
+.PHONY: check-docker docker-up docker-down docker-rebuild docker-shell migrate-create migrate-up migrate-down migrate-redo migrate-status
