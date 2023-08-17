@@ -1,4 +1,4 @@
-DATABASE_URL ?= postgres://root:secret@localhost:5434/prototype?sslmode=disable
+DATABASE_URL ?= postgres://root:secret@scheduler_db:5434/prototype?sslmode=disable
 
 HAS_DOCKER := $(shell command -v docker 2> /dev/null)
 ifndef HAS_DOCKER
@@ -35,32 +35,32 @@ docker-shell: check-docker
 # Target: migrate-create
 # Description: Create a new migration using goose
 # Usage: make migrate-create name=<migration_name>
-migrate-create: 
+migrate-create: check-docker
 ifdef name
-	goose -dir database/migrations create ${name} sql
+	docker compose exec scheduler_server goose -dir database/migrations create ${name} sql
 else
 	$(error "Usage: make migrate-create name=<migration_name>")
 endif
 
 # Target: migrate-up
 # Description: Apply database migrations using goose
-migrate-up: 
-	goose -dir database/migrations postgres postgres://root:secret@localhost:5434/prototype?sslmode=disable up 
+migrate-up: check-docker
+	docker compose exec scheduler_server goose -dir database/migrations up
 
 # Target: migrate-down
 # Description: Roll back database migrations using goose
-migrate-down: 
-	goose -dir database/migrations postgres postgres://root:secret@localhost:5434/prototype?sslmode=disable down
+migrate-down: check-docker
+	docker compose exec scheduler_server goose -dir database/migrations down
 
 # Target: migrate-redo
 # Description: Roll back and reapply the latest database migration using goose
-migrate-redo: 
-	goose -dir database/migrations postgres postgres://root:secret@localhost:5434/prototype?sslmode=disable redo
+migrate-redo: check-docker
+	docker compose exec scheduler_server goose -dir database/migrations redo
 
 # Target: migrate-status
 # Description: Show the status of applied and pending migrations using goose
-migrate-status: 
-	goose -dir database/migrations postgres postgres://root:secret@localhost:5434/prototype?sslmode=disable status
+migrate-status: check-docker
+	docker compose exec scheduler_server goose -dir database/migrations status
 
 	
 .PHONY: check-docker docker-up docker-down docker-rebuild docker-shell migrate-create migrate-up migrate-down migrate-redo migrate-status
