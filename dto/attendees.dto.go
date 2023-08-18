@@ -11,7 +11,7 @@ type MGraphAttendeeDto struct {
 	UserId       string
 	Name         string
 	EmailAddress string
-	ICalUid      *string
+	ICalUid      string
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }

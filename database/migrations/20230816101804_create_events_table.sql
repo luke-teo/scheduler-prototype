@@ -18,13 +18,13 @@ CREATE TABLE events (
     updated_time TIMESTAMP WITH TIME ZONE NOT NULL,
     timezone VARCHAR(255) NOT NULL,
     platform_url VARCHAR(255) NOT NULL,
-    meeting_url VARCHAR(255) NOT NULL
+    meeting_url VARCHAR(255) 
 );
 
 CREATE TABLE locations (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     ical_uid VARCHAR(255) NOT NULL,
-    display_name VARCHAR(255),
+    display_name VARCHAR(255) NOT NULL,
     location_uri VARCHAR(255),
     address VARCHAR(255)
 );

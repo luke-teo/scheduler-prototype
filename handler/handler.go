@@ -56,20 +56,22 @@ func (h *Handler) MGraphGetCalendarView(w http.ResponseWriter, r *http.Request) 
 
 	// Iterating over events
 	for _, event := range events.GetValue() {
-		iCalUid := *event.GetICalUId()
+		iCalUid := event.GetICalUId()
 
 		// Check if event already exists in DB
-		_, err := h.repo.GetEventByICalUid(iCalUid)
+		_, err := h.repo.GetEventByICalUid(*iCalUid)
 		if err != nil {
 			if err == utility.ErrNotFound {
-				meetingUrl := ""
+				var meetingUrl *string
 				if event.GetOnlineMeeting() != nil {
-					meetingUrl = *event.GetOnlineMeeting().GetJoinUrl()
+					meetingUrl = event.GetOnlineMeeting().GetJoinUrl()
+				} else {
+					meetingUrl = nil
 				}
 				// Event creation
 				eventDto := &dto.MGraphEventDto{
 					UserId:          "1",
-					ICalUid:         *event.GetICalUId(),
+					ICalUid:         *iCalUid,
 					EventId:         *event.GetId(),
 					Title:           *event.GetSubject(),
 					Description:     *event.GetBody().GetContent(),
@@ -100,56 +102,79 @@ func (h *Handler) MGraphGetCalendarView(w http.ResponseWriter, r *http.Request) 
 				}
 
 				// Attendees creation
-				// TODO: Check for duplicates
 				for _, attendee := range event.GetAttendees() {
-					// emailAddress := *attendee.GetEmailAddress().GetAddress()
-					// iCalUid := *event.GetICalUId()
-
-					attendeeDto := &dto.MGraphAttendeeDto{
-						UserId:       "1",
-						Name:         *attendee.GetEmailAddress().GetName(),
-						EmailAddress: *attendee.GetEmailAddress().GetAddress(),
-						ICalUid:      event.GetICalUId(),
-						CreatedAt:    time.Now(),
-						UpdatedAt:    time.Now(),
-					}
-					err := h.repo.CreateAttendee(attendeeDto)
+					emailAddress := *attendee.GetEmailAddress().GetAddress()
+					_, err := h.repo.GetAttendeeByICalUidAndEmailAddress(*iCalUid, emailAddress)
 					if err != nil {
-						w.WriteHeader(http.StatusInternalServerError)
-						response := map[string]string{"error": err.Error()}
-						json.NewEncoder(w).Encode(response)
-						return
+						if err == utility.ErrNotFound {
+							attendeeDto := &dto.MGraphAttendeeDto{
+								UserId:       "1",
+								Name:         *attendee.GetEmailAddress().GetName(),
+								EmailAddress: *attendee.GetEmailAddress().GetAddress(),
+								ICalUid:      *iCalUid,
+								CreatedAt:    time.Now(),
+								UpdatedAt:    time.Now(),
+							}
+							err := h.repo.CreateAttendee(attendeeDto)
+							if err != nil {
+								w.WriteHeader(http.StatusInternalServerError)
+								response := map[string]string{"error": err.Error()}
+								json.NewEncoder(w).Encode(response)
+								return
+							}
+						} else {
+							w.WriteHeader(http.StatusInternalServerError)
+							response := map[string]string{"error": err.Error()}
+							json.NewEncoder(w).Encode(response)
+							return
+						}
 					}
 				}
 
 				// Location creation
-				// TODO: Check for duplicates
-				for _, location := range event.GetLocations() {
-					// combine address props to create a single string
-					street := *location.GetAddress().GetStreet()
-					city := *location.GetAddress().GetCity()
-					state := *location.GetAddress().GetState()
-					postalCode := *location.GetAddress().GetPostalCode()
-					country := *location.GetAddress().GetCountryOrRegion()
+				if len(event.GetLocations()) > 0 {
+					for _, location := range event.GetLocations() {
+						displayName := location.GetDisplayName()
+						_, err := h.repo.GetLocationByICalUidAndDisplayName(*iCalUid, *displayName)
+						if err != nil {
+							if err == utility.ErrNotFound {
+								var address *string
+								// combine address props to create a single string
+								street := *location.GetAddress().GetStreet()
+								city := *location.GetAddress().GetCity()
+								state := *location.GetAddress().GetState()
+								postalCode := *location.GetAddress().GetPostalCode()
+								country := *location.GetAddress().GetCountryOrRegion()
 
-					address := street + ", " + city + ", " + state + ", " + postalCode + ", " + country
-					if address == ",,,," {
-						address = ""
-					}
+								fullAddress := street + ", " + city + ", " + state + ", " + postalCode + ", " + country
+								if fullAddress == ", , , , " {
+									address = nil
+								} else {
+									address = &fullAddress
+								}
 
-					locationDto := &dto.MGraphLocationDto{
-						ICalUid:     event.GetICalUId(),
-						DisplayName: location.GetDisplayName(),
-						LocationUri: location.GetLocationUri(),
-						Address:     address,
-					}
+								locationDto := &dto.MGraphLocationDto{
+									ICalUid:     *iCalUid,
+									DisplayName: *displayName,
+									LocationUri: location.GetLocationUri(),
+									Address:     address,
+								}
 
-					err := h.repo.CreateLocation(locationDto)
-					if err != nil {
-						w.WriteHeader(http.StatusInternalServerError)
-						response := map[string]string{"error": err.Error()}
-						json.NewEncoder(w).Encode(response)
-						return
+								err := h.repo.CreateLocation(locationDto)
+								if err != nil {
+									w.WriteHeader(http.StatusInternalServerError)
+									response := map[string]string{"error": err.Error()}
+									json.NewEncoder(w).Encode(response)
+									return
+								}
+							} else {
+								w.WriteHeader(http.StatusInternalServerError)
+								response := map[string]string{"error": err.Error()}
+								json.NewEncoder(w).Encode(response)
+								return
+							}
+						}
+
 					}
 				}
 			} else {

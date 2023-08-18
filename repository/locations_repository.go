@@ -70,3 +70,20 @@ func (r *Repository) GetLocationByICalUid(iCalUid string) (dto.MGraphLocationDto
 
 	return locations[0], nil
 }
+
+func (r *Repository) GetLocationByICalUidAndDisplayName(iCalUid string, displayName string) (dto.MGraphLocationDto, error) {
+	query := `
+				SELECT * FROM locations WHERE ical_uid = $1 AND display_name = $2
+			 `
+
+	locations, err := r.fetchLocations(query, iCalUid, displayName)
+	if err != nil {
+		return dto.MGraphLocationDto{}, err
+	}
+
+	if len(locations) == 0 {
+		return dto.MGraphLocationDto{}, utility.ErrNotFound
+	}
+
+	return locations[0], nil
+}

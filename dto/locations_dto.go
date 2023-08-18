@@ -8,10 +8,10 @@ import (
 
 type MGraphLocationDto struct {
 	ID          uuid.UUID
-	ICalUid     *string
-	DisplayName *string
+	ICalUid     string
+	DisplayName string
 	LocationUri *string
-	Address     string
+	Address     *string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
