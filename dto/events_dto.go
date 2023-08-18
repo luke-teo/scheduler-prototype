@@ -1,11 +1,15 @@
 package dto
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type MGraphEventDto struct {
-	ID              int64
+	ID              uuid.UUID
 	UserId          string
-	ICalId          string
+	ICalUid         string
 	EventId         string
 	Title           string
 	Description     string
@@ -23,4 +27,6 @@ type MGraphEventDto struct {
 	MeetingUrl      string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+	IsRecurring     bool
+	SeriesMasterId  *string
 }

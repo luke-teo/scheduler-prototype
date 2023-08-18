@@ -1,23 +1,11 @@
 package repository
 
 import (
-	"database/sql"
-
 	"github.com/scheduler-prototype/dto"
 	"github.com/scheduler-prototype/utility"
 )
 
-type Repository struct {
-	conn *sql.DB
-}
-
-func NewRepository(conn *sql.DB) *Repository {
-	return &Repository{
-		conn: conn,
-	}
-}
-
-func (r *Repository) fetch(query string, args ...interface{}) ([]dto.MGraphEventDto, error) {
+func (r *Repository) fetchEvents(query string, args ...interface{}) ([]dto.MGraphEventDto, error) {
 	rows, err := r.conn.Query(query, args...)
 	if err != nil {
 		return nil, err
@@ -30,7 +18,7 @@ func (r *Repository) fetch(query string, args ...interface{}) ([]dto.MGraphEvent
 		if err := rows.Scan(
 			&event.ID,
 			&event.UserId,
-			&event.ICalId,
+			&event.ICalUid,
 			&event.EventId,
 			&event.Title,
 			&event.Description,
@@ -48,6 +36,8 @@ func (r *Repository) fetch(query string, args ...interface{}) ([]dto.MGraphEvent
 			&event.MeetingUrl,
 			&event.CreatedAt,
 			&event.UpdatedAt,
+			&event.IsRecurring,
+			&event.SeriesMasterId,
 		); err != nil {
 			return nil, err
 		}
@@ -63,15 +53,15 @@ func (r *Repository) CreateEvent(event *dto.MGraphEventDto) error {
 					locations_count, start_time, end_time, is_online, 
 					is_all_day, is_cancelled, organizer_user_id, 
 					created_time, updated_time, timezone, platform_url, 
-					meeting_url, created_at, updated_at)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19) 
+					meeting_url, created_at, updated_at, is_recurring, series_master_id)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20 , $21) 
 				RETURNING id
 			 `
 
 	if err := r.conn.QueryRow(
 		query,
 		event.UserId,
-		event.ICalId,
+		event.ICalUid,
 		event.EventId,
 		event.Title,
 		event.Description,
@@ -89,6 +79,8 @@ func (r *Repository) CreateEvent(event *dto.MGraphEventDto) error {
 		event.MeetingUrl,
 		event.CreatedAt,
 		event.UpdatedAt,
+		event.IsRecurring,
+		event.SeriesMasterId,
 	).Scan(&event.ID); err != nil {
 		return err
 	}
@@ -101,7 +93,7 @@ func (r *Repository) GetEventByICalUid(iCalUid string) (dto.MGraphEventDto, erro
 				SELECT * FROM events WHERE ical_uid = $1
 			 `
 
-	events, err := r.fetch(query, iCalUid)
+	events, err := r.fetchEvents(query, iCalUid)
 	if err != nil {
 		return dto.MGraphEventDto{}, err
 	}

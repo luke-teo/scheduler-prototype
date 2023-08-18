@@ -56,6 +56,11 @@ migrate-down: check-docker
 # Description: Roll back and reapply the latest database migration using goose
 migrate-redo: check-docker
 	docker compose exec scheduler_server goose -dir database/migrations redo
+	
+# Target: migrate-reset
+# Description: Roll back all migrations using goose
+migrate-reset: check-docker
+	docker compose exec scheduler_server goose -dir database/migrations reset
 
 # Target: migrate-status
 # Description: Show the status of applied and pending migrations using goose
@@ -63,4 +68,4 @@ migrate-status: check-docker
 	docker compose exec scheduler_server goose -dir database/migrations status
 
 	
-.PHONY: check-docker docker-up docker-down docker-rebuild docker-shell migrate-create migrate-up migrate-down migrate-redo migrate-status
+.PHONY: check-docker docker-up docker-down docker-rebuild docker-shell migrate-create migrate-up migrate-down migrate-redo migrate-reset migrate-status
