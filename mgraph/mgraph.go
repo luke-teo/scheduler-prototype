@@ -1,22 +1,21 @@
 package mgraph
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"os"
 
 	azidentity "github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	_ "github.com/lib/pq"
 	msgraphsdk "github.com/microsoftgraph/msgraph-sdk-go"
-	"github.com/microsoftgraph/msgraph-sdk-go/models"
+	graphmodels "github.com/microsoftgraph/msgraph-sdk-go/models"
 	"github.com/microsoftgraph/msgraph-sdk-go/models/odataerrors"
-	graphusers "github.com/microsoftgraph/msgraph-sdk-go/users"
+	requestDto "github.com/scheduler-prototype/dto/request"
 )
 
 type MGraphInterface interface {
 	Init() (*msgraphsdk.GraphServiceClient, error)
-	GetCalendarView(client *msgraphsdk.GraphServiceClient, requestStartDateTime string, requestEndDateTime string) (models.EventCollectionResponseable, error)
+	GetCalendarView(requestStartDateTime string, requestEndDateTime string) (graphmodels.EventCollectionResponseable, error)
+	PostCreateEvent(requestDto *requestDto.MGraphCreateEventDto) (*graphmodels.Event, error)
 }
 
 type MGraph struct {
@@ -58,25 +57,6 @@ func (m *MGraph) Init() (*msgraphsdk.GraphServiceClient, error) {
 	client, err := msgraphsdk.NewGraphServiceClientWithCredentials(cred, scopes)
 
 	return client, nil
-}
-
-func (m *MGraph) GetCalendarView(requestStartDateTime string, requestEndDateTime string) (models.EventCollectionResponseable, error) {
-	requestParameters := &graphusers.ItemCalendarCalendarViewRequestBuilderGetQueryParameters{
-		StartDateTime: &requestStartDateTime,
-		EndDateTime:   &requestEndDateTime,
-	}
-	configuration := &graphusers.ItemCalendarCalendarViewRequestBuilderGetRequestConfiguration{
-		QueryParameters: requestParameters,
-	}
-	// Get the events
-	events, err := m.graphClient.Users().ByUserId("24dc94f1-08bf-4d47-850b-5690533b8236").Calendar().CalendarView().Get(context.Background(), configuration)
-	if err != nil {
-		printOdataError(err)
-		errorMessage := err.(*odataerrors.ODataError).GetErrorEscaped().GetMessage()
-		return nil, errors.New(*errorMessage)
-	}
-
-	return events, nil
 }
 
 func printOdataError(err error) {
