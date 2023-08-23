@@ -2,7 +2,7 @@ package handler
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -82,7 +82,8 @@ func (h *Handler) MGraphCalendarViewFirstSync(w http.ResponseWriter, r *http.Req
 	// Calculate the end of the next month
 	endOfNextMonth := startOfNextMonth.Add(-time.Second)
 
-	events, err := h.client.GetDeltaCalendarView(startOfMonth.Format(time.RFC3339), endOfNextMonth.Format(time.RFC3339), userDto)
+	requestStart := time.Now()
+	deltaLink, events, err := h.client.GetCalendarViewDelta(startOfMonth.Format(time.RFC3339), endOfNextMonth.Format(time.RFC3339), userDto)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		response := map[string]string{"error": err.Error()}
@@ -90,6 +91,154 @@ func (h *Handler) MGraphCalendarViewFirstSync(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	log.Printf("Events: %v", events)
+	requestDuration := time.Since(requestStart)
+
+	for _, event := range *events {
+		iCalUid := event.GetICalUId()
+
+		// Check if event already exists in DB
+		_, err := h.repo.GetEventByICalUid(*iCalUid)
+		if err != nil {
+			if err == utility.ErrNotFound {
+				var meetingUrl *string
+				if event.GetOnlineMeeting() != nil {
+					meetingUrl = event.GetOnlineMeeting().GetJoinUrl()
+				} else {
+					meetingUrl = nil
+				}
+				// Event creation
+				eventDto := &dto.MGraphEventDto{
+					UserId:          "1",
+					ICalUid:         *iCalUid,
+					EventId:         *event.GetId(),
+					Title:           *event.GetSubject(),
+					Description:     *event.GetBody().GetContent(),
+					LocationsCount:  len(event.GetLocations()),
+					StartTime:       *event.GetStart().GetDateTime(),
+					EndTime:         *event.GetEnd().GetDateTime(),
+					IsOnline:        *event.GetIsOnlineMeeting(),
+					IsAllDay:        *event.GetIsAllDay(),
+					IsCancelled:     *event.GetIsCancelled(),
+					OrganizerUserId: "1",
+					CreatedTime:     *event.GetCreatedDateTime(),
+					UpdatedTime:     *event.GetLastModifiedDateTime(),
+					Timezone:        *event.GetStart().GetTimeZone(),
+					PlatformUrl:     *event.GetWebLink(),
+					MeetingUrl:      meetingUrl,
+					Type:            event.GetTypeEscaped().String(),
+					IsRecurring:     event.GetSeriesMasterId() != nil,
+					SeriesMasterId:  event.GetSeriesMasterId(),
+					CreatedAt:       time.Now(),
+					UpdatedAt:       time.Now(),
+				}
+
+				err = h.repo.CreateEvent(eventDto)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					response := map[string]string{"error": err.Error()}
+					json.NewEncoder(w).Encode(response)
+					return
+				}
+
+				// Attendees creation
+				for _, attendee := range event.GetAttendees() {
+					emailAddress := *attendee.GetEmailAddress().GetAddress()
+					_, err := h.repo.GetAttendeeByICalUidAndEmailAddress(*iCalUid, emailAddress)
+					if err != nil {
+						if err == utility.ErrNotFound {
+							attendeeDto := &dto.MGraphAttendeeDto{
+								UserId:       "1",
+								Name:         *attendee.GetEmailAddress().GetName(),
+								EmailAddress: *attendee.GetEmailAddress().GetAddress(),
+								ICalUid:      *iCalUid,
+								CreatedAt:    time.Now(),
+								UpdatedAt:    time.Now(),
+							}
+							err := h.repo.CreateAttendee(attendeeDto)
+							if err != nil {
+								w.WriteHeader(http.StatusInternalServerError)
+								response := map[string]string{"error": err.Error()}
+								json.NewEncoder(w).Encode(response)
+								return
+							}
+						} else {
+							w.WriteHeader(http.StatusInternalServerError)
+							response := map[string]string{"error": err.Error()}
+							json.NewEncoder(w).Encode(response)
+							return
+						}
+					}
+				}
+
+				// Location creation
+				if len(event.GetLocations()) > 0 {
+					for _, location := range event.GetLocations() {
+						displayName := location.GetDisplayName()
+						_, err := h.repo.GetLocationByICalUidAndDisplayName(*iCalUid, *displayName)
+						if err != nil {
+							if err == utility.ErrNotFound {
+								var address *string
+								// combine address props to create a single string
+								street := *location.GetAddress().GetStreet()
+								city := *location.GetAddress().GetCity()
+								state := *location.GetAddress().GetState()
+								postalCode := *location.GetAddress().GetPostalCode()
+								country := *location.GetAddress().GetCountryOrRegion()
+
+								fullAddress := street + ", " + city + ", " + state + ", " + postalCode + ", " + country
+								if fullAddress == ", , , , " {
+									address = nil
+								} else {
+									address = &fullAddress
+								}
+
+								locationDto := &dto.MGraphLocationDto{
+									ICalUid:     *iCalUid,
+									DisplayName: *displayName,
+									LocationUri: location.GetLocationUri(),
+									Address:     address,
+								}
+
+								err := h.repo.CreateLocation(locationDto)
+								if err != nil {
+									w.WriteHeader(http.StatusInternalServerError)
+									response := map[string]string{"error": err.Error()}
+									json.NewEncoder(w).Encode(response)
+									return
+								}
+							} else {
+								w.WriteHeader(http.StatusInternalServerError)
+								response := map[string]string{"error": err.Error()}
+								json.NewEncoder(w).Encode(response)
+								return
+							}
+						}
+
+					}
+				}
+			} else {
+				w.WriteHeader(http.StatusInternalServerError)
+				response := map[string]string{"error": err.Error()}
+				json.NewEncoder(w).Encode(response)
+				return
+			}
+		}
+		continue
+	}
+
+	// once events are inputted into the database, we need to store the token
+	userDto.CurrentDelta = deltaLink
+	err = h.repo.UpdateCurrentDeltaByUser(&userDto)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		response := map[string]string{"error": err.Error()}
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// Print the time the request took
+	fmt.Printf("Graph Request took: %s\n", requestDuration)
 	w.WriteHeader(http.StatusOK)
+	response := map[string]string{"message": "Events successfully synced", "data": *deltaLink}
+	json.NewEncoder(w).Encode(response)
 }

@@ -55,8 +55,8 @@ func (r *Repository) CreateUser(user *dto.UserDto) error {
 
 func (r *Repository) GetUserByUserId(userId *uuid.UUID) (dto.UserDto, error) {
 	query := `
-	SELECT * FROM users WHERE user_id = $1 
-	`
+						SELECT * FROM users WHERE user_id = $1 
+					`
 	users, err := r.fetchUsers(query, userId)
 	if err != nil {
 		return dto.UserDto{}, err
@@ -67,4 +67,20 @@ func (r *Repository) GetUserByUserId(userId *uuid.UUID) (dto.UserDto, error) {
 	}
 
 	return users[0], nil
+}
+
+func (r *Repository) UpdateCurrentDeltaByUser(userDto *dto.UserDto) error {
+	query := ` 
+						UPDATE users SET current_delta = $2 WHERE user_id = $1
+					`
+
+	if _, err := r.conn.Exec(
+		query,
+		userDto.UserId,
+		*userDto.CurrentDelta,
+	); err != nil {
+		return err
+	}
+
+	return nil
 }

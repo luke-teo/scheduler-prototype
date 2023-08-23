@@ -29,8 +29,6 @@ CREATE TABLE events (
 CREATE TABLE locations (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     ical_uid VARCHAR(255) NOT NULL,
-    name varchar(255),
-    email_address varchar(255) NOT NULL,
     display_name VARCHAR(255) NOT NULL,
     location_uri VARCHAR(255),
     address VARCHAR(255),
@@ -41,6 +39,9 @@ CREATE TABLE locations (
 CREATE TABLE attendees (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id BIGINT,
+    ical_uid VARCHAR(255) NOT NULL,
+    name varchar(255),
+    email_address varchar(255) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
