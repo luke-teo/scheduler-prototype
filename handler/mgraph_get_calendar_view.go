@@ -75,10 +75,11 @@ func (h *Handler) MGraphGetCalendarView(w http.ResponseWriter, r *http.Request) 
 					Timezone:        *event.GetStart().GetTimeZone(),
 					PlatformUrl:     *event.GetWebLink(),
 					MeetingUrl:      meetingUrl,
-					CreatedAt:       time.Now(),
-					UpdatedAt:       time.Now(),
+					Type:            event.GetTypeEscaped().String(),
 					IsRecurring:     event.GetSeriesMasterId() != nil,
 					SeriesMasterId:  event.GetSeriesMasterId(),
+					CreatedAt:       time.Now(),
+					UpdatedAt:       time.Now(),
 				}
 
 				err = h.repo.CreateEvent(eventDto)

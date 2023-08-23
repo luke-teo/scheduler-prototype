@@ -25,8 +25,9 @@ type MGraphEventDto struct {
 	Timezone        string
 	PlatformUrl     string
 	MeetingUrl      *string
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	Type            string
 	IsRecurring     bool
 	SeriesMasterId  *string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }

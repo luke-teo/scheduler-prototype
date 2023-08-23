@@ -18,20 +18,31 @@ CREATE TABLE events (
     updated_time TIMESTAMP WITH TIME ZONE NOT NULL,
     timezone VARCHAR(255) NOT NULL,
     platform_url VARCHAR(255) NOT NULL,
-    meeting_url VARCHAR(255) 
+    meeting_url VARCHAR(255), 
+    type VARCHAR(255),
+    is_recurring BOOL NOT NULL,
+    series_master_id VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE locations (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     ical_uid VARCHAR(255) NOT NULL,
+    name varchar(255),
+    email_address varchar(255) NOT NULL,
     display_name VARCHAR(255) NOT NULL,
     location_uri VARCHAR(255),
-    address VARCHAR(255)
+    address VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE attendees (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id BIGINT 
+    user_id BIGINT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 -- +goose StatementEnd
 
