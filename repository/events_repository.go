@@ -34,10 +34,11 @@ func (r *Repository) fetchEvents(query string, args ...interface{}) ([]dto.MGrap
 			&event.Timezone,
 			&event.PlatformUrl,
 			&event.MeetingUrl,
-			&event.CreatedAt,
-			&event.UpdatedAt,
+			&event.Type,
 			&event.IsRecurring,
 			&event.SeriesMasterId,
+			&event.CreatedAt,
+			&event.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -53,8 +54,8 @@ func (r *Repository) CreateEvent(event *dto.MGraphEventDto) error {
 					locations_count, start_time, end_time, is_online, 
 					is_all_day, is_cancelled, organizer_user_id, 
 					created_time, updated_time, timezone, platform_url, 
-					meeting_url, created_at, updated_at, is_recurring, series_master_id)
-				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20 , $21) 
+					meeting_url, type, is_recurring, series_master_id, created_at, updated_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20 , $21, $22) 
 				RETURNING id
 			 `
 
@@ -77,10 +78,11 @@ func (r *Repository) CreateEvent(event *dto.MGraphEventDto) error {
 		event.Timezone,
 		event.PlatformUrl,
 		event.MeetingUrl,
-		event.CreatedAt,
-		event.UpdatedAt,
+		event.Type,
 		event.IsRecurring,
 		event.SeriesMasterId,
+		event.CreatedAt,
+		event.UpdatedAt,
 	).Scan(&event.ID); err != nil {
 		return err
 	}
