@@ -26,11 +26,6 @@ func (h *Handler) MGraphCreateEvent(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(response)
 		return
 	}
-	// Converting the model into a JSON object
-	// serializer := msjson.NewJsonSerializationWriter()
-	// event.Serialize(serializer)
-	// eventsJson, _ := serializer.GetSerializedContent()
-	// log.Printf("%v", event)
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(event)
