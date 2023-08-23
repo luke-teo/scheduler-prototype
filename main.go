@@ -56,6 +56,7 @@ func main() {
 	subRouter := chi.NewRouter()
 	subRouter.Get("/calendarview", controller.MGraphGetCalendarView)
 	subRouter.Post("/event/create", controller.MGraphCreateEvent)
+	subRouter.Post("/calendarview/first-sync", controller.MGraphCalendarViewFirstSync)
 
 	r.Mount("/mgraph", subRouter)
 

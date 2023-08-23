@@ -257,6 +257,7 @@ func (m *MGraph) PostCreateEvent(requestDto *requestDto.MGraphCreateEventDto) (*
 		errorMessage := err.(*odataerrors.ODataError).GetErrorEscaped().GetMessage()
 		return nil, errors.New(*errorMessage)
 	}
+	// better way to handle creation of events and sync? should we wait for delta? or just return the event?
 	log.Println(event.GetBody().GetContent())
 	return &event, nil
 }
