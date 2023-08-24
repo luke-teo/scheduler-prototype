@@ -23,6 +23,8 @@ func (r *Repository) fetchUsers(query string, args ...interface{}) ([]dto.UserDt
 			&user.PreviousDelta,
 			&user.CreatedAt,
 			&user.UpdatedAt,
+			&user.SubscriptionId,
+			&user.SubscriptionExpiresAt,
 		); err != nil {
 			return nil, err
 		}
@@ -34,8 +36,8 @@ func (r *Repository) fetchUsers(query string, args ...interface{}) ([]dto.UserDt
 func (r *Repository) CreateUser(user *dto.UserDto) error {
 	query := `
 				INSERT INTO users 
-					(user_id, current_delta, previous_delta, created_at, updated_at)
-				VALUES ($1, $2, $3, $4, $5) 
+					(user_id, current_delta, previous_delta, created_at, updated_at, subscription_id, subscription_expires_at)
+				VALUES ($1, $2, $3, $4, $5, $6, $7) 
 				RETURNING id
 			 `
 
@@ -46,6 +48,8 @@ func (r *Repository) CreateUser(user *dto.UserDto) error {
 		user.PreviousDelta,
 		user.CreatedAt,
 		user.UpdatedAt,
+		user.SubscriptionId,
+		user.SubscriptionExpiresAt,
 	).Scan(&user.ID); err != nil {
 		return err
 	}
@@ -78,6 +82,39 @@ func (r *Repository) UpdateCurrentDeltaByUser(userDto *dto.UserDto) error {
 		query,
 		userDto.UserId,
 		*userDto.CurrentDelta,
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Repository) UpdateSubscriptionIdByUser(userDto *dto.UserDto) error {
+	query := ` 
+						UPDATE users SET subscription_id = $2 WHERE user_id = $1
+					`
+
+	if _, err := r.conn.Exec(
+		query,
+		userDto.UserId,
+		userDto.SubscriptionId,
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Repository) UpdateSubscriptionInfoByUser(userDto *dto.UserDto) error {
+	query := ` 
+						UPDATE users SET subscription_id = $2, subscription_expires_at = $3 WHERE user_id = $1
+					`
+
+	if _, err := r.conn.Exec(
+		query,
+		userDto.UserId,
+		userDto.SubscriptionId,
+		userDto.SubscriptionExpiresAt,
 	); err != nil {
 		return err
 	}
