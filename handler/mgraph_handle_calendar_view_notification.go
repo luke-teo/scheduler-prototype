@@ -2,6 +2,8 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -10,8 +12,8 @@ import (
 func (h *Handler) MGraphHandleCalendarViewNotification(w http.ResponseWriter, r *http.Request) {
 	// check if it is for verification
 	validationToken := r.URL.Query().Get("validationToken")
-	log.Printf("validationToken: %s", validationToken)
 	if validationToken != "" {
+		log.Printf("validationToken exists")
 		urlDecodedValidationToken, err := url.QueryUnescape(validationToken)
 		log.Printf("validationToken: %s", validationToken)
 		log.Printf("urlDecodedValidationToken: %s", urlDecodedValidationToken)
@@ -28,6 +30,17 @@ func (h *Handler) MGraphHandleCalendarViewNotification(w http.ResponseWriter, r 
 		w.Write([]byte(urlDecodedValidationToken))
 		return
 	}
+
+	// Read the request body
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		return
+	}
+
+	// Print the raw JSON data
+	fmt.Println("Received Raw JSON Request Body:")
+	fmt.Println(string(body))
 
 	// otherwise, check notification and update accordingly
 
