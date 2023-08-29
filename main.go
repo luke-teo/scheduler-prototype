@@ -60,8 +60,8 @@ func main() {
 	subRouter.Get("/calendarview", controller.MGraphGetCalendarView)
 	subRouter.Post("/event/create", controller.MGraphCreateEvent)
 	subRouter.Post("/calendarview/first-sync", controller.MGraphCalendarViewFirstSync)
-	subRouter.Post("/calendarview/subscription", controller.MGraphCreateCalendarViewSubscription)
-	subRouter.Post("/calendarview/subscription/verify", controller.MGraphVerifyCalendarViewSubscription)
+	subRouter.Post("/calendarview/subscription/notification", controller.MGraphHandleCalendarViewNotification)
+	subRouter.Post("/calendarview/subscription/renew", controller.MGraphHandleCalendarViewSubscriptionRenew)
 
 	r.Mount("/mgraph", subRouter)
 

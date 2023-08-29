@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -68,7 +69,6 @@ func (h *Handler) MGraphCalendarViewFirstSync(w http.ResponseWriter, r *http.Req
 	}
 
 	// make first delta queries to Microsoft Graph
-
 	// Get the current time in the user's timezone
 	now := time.Now().UTC().Add(time.Duration(time.Hour * -8))
 
@@ -92,6 +92,8 @@ func (h *Handler) MGraphCalendarViewFirstSync(w http.ResponseWriter, r *http.Req
 	}
 
 	requestDuration := time.Since(requestStart)
+	// Print the time the request took
+	fmt.Printf("Graph Delta Request took: %s\n", requestDuration)
 
 	for _, event := range *events {
 		iCalUid := event.GetICalUId()
@@ -225,6 +227,7 @@ func (h *Handler) MGraphCalendarViewFirstSync(w http.ResponseWriter, r *http.Req
 		}
 		continue
 	}
+	log.Println("completed processing events")
 
 	// once events are inputted into the database, we need to store the token
 	userDto.CurrentDelta = deltaLink
@@ -236,8 +239,36 @@ func (h *Handler) MGraphCalendarViewFirstSync(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Print the time the request took
-	fmt.Printf("Graph Request took: %s\n", requestDuration)
+	// Create subscription for the user
+	userUuid := userDto.UserId.String()
+	// create request to Microsoft Graph to create the event
+	requestStart = time.Now()
+	subscriptions, err := h.client.CreateCalendarViewSubscription(&userUuid)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		response := map[string]string{"error": err.Error()}
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+	log.Printf("subscriptions: %s", subscriptions)
+	requestDuration = time.Since(requestStart)
+	fmt.Printf("Graph Subscription Request took: %s\n", requestDuration)
+
+	userDto.SubscriptionId = subscriptions.GetId()
+	userDto.SubscriptionExpiresAt = subscriptions.GetExpirationDateTime()
+	log.Printf("userDto.SubscriptionId: %s", *userDto.SubscriptionId)
+	log.Printf("userDto.SubscriptionExpiresAt: %s", *userDto.SubscriptionExpiresAt)
+	err = h.repo.UpdateSubscriptionInfoByUser(&userDto)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		response := map[string]string{"error": err.Error()}
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	log.Println("completed creating subscription")
+
 	w.WriteHeader(http.StatusOK)
 	response := map[string]string{"message": "Events successfully synced", "data": *deltaLink}
 	json.NewEncoder(w).Encode(response)

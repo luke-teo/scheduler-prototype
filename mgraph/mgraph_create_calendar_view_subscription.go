@@ -10,10 +10,9 @@ import (
 
 	graphmodels "github.com/microsoftgraph/msgraph-sdk-go/models"
 	"github.com/microsoftgraph/msgraph-sdk-go/models/odataerrors"
-	requestDto "github.com/scheduler-prototype/dto/request"
 )
 
-func (m *MGraph) CreateCalendarViewSubscription(req *requestDto.MGraphCreateCalendarViewSubscriptionDto) (graphmodels.Subscriptionable, error) {
+func (m *MGraph) CreateCalendarViewSubscription(userId *string) (graphmodels.Subscriptionable, error) {
 	// create a subscription for specific user
 	// -- should optimally be called on first sync so that any changes can be tracked
 	requestBody := graphmodels.NewSubscription()
@@ -30,7 +29,7 @@ func (m *MGraph) CreateCalendarViewSubscription(req *requestDto.MGraphCreateCale
 	log.Printf("lifecycleNotificationUrl: %s", lifecycleNotificationUrl)
 	requestBody.SetLifecycleNotificationUrl(&lifecycleNotificationUrl)
 
-	resource := fmt.Sprintf("/users/%s/events", req.UserId)
+	resource := fmt.Sprintf("/users/%s/events", *userId)
 	requestBody.SetResource(&resource)
 
 	// Get the current time in the user's timezone
