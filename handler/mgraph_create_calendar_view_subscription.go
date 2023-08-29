@@ -48,7 +48,8 @@ func (h *Handler) MGraphCreateCalendarViewSubscription(w http.ResponseWriter, r 
 	userDto.SubscriptionId = subscriptions.GetId()
 	userDto.SubscriptionExpiresAt = subscriptions.GetExpirationDateTime()
 	log.Printf("userDto.SubscriptionId: %s", *userDto.SubscriptionId)
-	err = h.repo.UpdateSubscriptionIdByUser(&userDto)
+	log.Printf("userDto.SubscriptionExpiresAt: %s", *userDto.SubscriptionExpiresAt)
+	err = h.repo.UpdateSubscriptionInfoByUser(&userDto)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

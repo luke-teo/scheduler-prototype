@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/scheduler-prototype/handler"
@@ -52,6 +53,8 @@ func main() {
 
 	// chi router
 	r := chi.NewRouter()
+	r.Use(middleware.Logger) // <--<< Logger should come before Recoverer
+	r.Use(middleware.Recoverer)
 
 	subRouter := chi.NewRouter()
 	subRouter.Get("/calendarview", controller.MGraphGetCalendarView)
